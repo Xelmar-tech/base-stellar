@@ -26,29 +26,16 @@ function buildVault(): string {
   console.log("🏗️  Building vault contract...");
 
   const vaultDir = path.join(__dirname, "..", "vault");
-  const targetDir = path.join(vaultDir, "target");
 
-  // Set up environment for Soroban
-  const env = {
-    ...process.env,
-    SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: "1",
-    CARGO_BUILD_RUSTFLAGS:
-      "--remap-path-prefix=C:/Users/olatu/.cargo/registry/src= --cfg feature=\"soroban_sdk_internal_spec_shaking\"",
-  };
-
-  // Build with cargo
   execSync(
-    `cd "${vaultDir}" && cargo build --release --target wasm32-unknown-unknown`,
-    {
-      stdio: "inherit",
-      env,
-    }
+    `cd "${vaultDir}" && cargo build --release --target wasm32v1-none`,
+    { stdio: "inherit" }
   );
 
   const wasmPath = path.join(
     vaultDir,
     "target",
-    "wasm32-unknown-unknown",
+    "wasm32v1-none",
     "release",
     "vault.wasm"
   );
@@ -64,8 +51,8 @@ function buildVault(): string {
 function deployVault(wasmPath: string, walletSecret: string, network: Network): string {
   console.log("🚀 Deploying vault...");
 
-  const net = CONFIG[network];
-  const cmd = `stellar-cli contract deploy --source "${walletSecret}" --wasm "${wasmPath}" --rpc-url "${net.rpcUrl}" --network-passphrase "${net.passphrase}"`;
+const net = CONFIG[network];
+  const cmd = `stellar contract deploy --source-account "${walletSecret}" --wasm "${wasmPath}" --rpc-url "${net.rpcUrl}" --network-passphrase "${net.passphrase}"`;
 
   const output = execSync(cmd, { encoding: "utf8", stdio: "pipe" });
   const contractId = output.trim();
@@ -82,15 +69,15 @@ function initVault(contractId: string, walletSecret: string, network: Network): 
   console.log("🔧 Initializing vault...");
 
   const net = CONFIG[network];
-  const cmd = `stellar-cli contract invoke \
-    --source "${walletSecret}" \
+  const cmd = `stellar contract invoke \
+    --source-account "${walletSecret}" \
     --id ${contractId} \
     --rpc-url "${net.rpcUrl}" \
     --network-passphrase "${net.passphrase}" \
     -- \
     init \
     --gateway ${net.gateway} \
-    --source_address ${net.sourceAddress}`;
+    --source-address ${net.sourceAddress}`;
 
   execSync(cmd, { encoding: "utf8", stdio: "inherit" });
   console.log("✅ Initialized!");

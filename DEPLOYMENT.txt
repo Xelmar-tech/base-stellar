@@ -1,0 +1,20 @@
+🌐 Network: TESTNET
+📝 Gateway: CB2JYOOZPHO43R57TC5PXV22QICKIDC5NKRF62BZG2J6JYFUIQPIAYY3
+📝 Source:  0xE7fc2C2ccea91c5Ce55a6819CDEe315AA9BA12e6
+🏗️  Building vault contract...
+    Finished `release` profile [optimized] target(s) in 0.82s
+✅ Built: C:\Users\olatu\Documents\GitHub\XelmarTech\Base-Stellar\vault\target\wasm32v1-none\release\vault.wasm
+🚀 Deploying vault...
+✅ Contract deployed: CCJZPHVUWVYOLUK4J6KGHEZS5KWK5MDFHDDSIOR26EVTQS3EBWKFKU4P
+🔧 Initializing vault...
+⚠️  A new release of Stellar CLI is available: 25.2.0 -> 26.0.0
+ℹ️  Simulating transaction…
+ℹ️  Signing transaction: e5cd8c40c6118f94d39c051ca80549eced6438dc076b7a1ad4f6d0b49d420835
+🌎 Sending transaction…
+✅ Transaction submitted successfully!
+🔗 https://stellar.expert/explorer/testnet/tx/e5cd8c40c6118f94d39c051ca80549eced6438dc076b7a1ad4f6d0b49d420835
+
+✅ Initialized!
+
+✨ Vault deployed at: CCJZPHVUWVYOLUK4J6KGHEZS5KWK5MDFHDDSIOR26EVTQS3EBWKFKU4P
+   Add this to your Base calling contract: CCJZPHVUWVYOLUK4J6KGHEZS5KWK5MDFHDDSIOR26EVTQS3EBWKFKU4P

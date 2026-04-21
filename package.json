@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "deploy": "ts-node src/deploy.ts",
-    "build": "cd vault && cargo build --release --target wasm32-unknown-unknown"
+    "build": "cd vault && cargo build --release --target wasm32v1-none"
   },
   "keywords": [],
   "author": "",

@@ -1,9 +1,12 @@
+#![no_std]
+
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, token::TokenClient, Address, Bytes, Env,
     String,
 };
-use stellar_axelar_gateway::executable::{validate_message, CustomAxelarExecutable};
-use stellar_axelar_std::AxelarExecutable;
+use stellar_axelar_gateway::executable::{
+    validate_message, AxelarExecutable, AxelarExecutableInterface, CustomAxelarExecutable,
+};
 
 #[derive(Clone)]
 #[contracttype]
@@ -88,12 +91,13 @@ impl CustomAxelarExecutable for Vault {
         validate_message::<Vault>(&e, &source_chain, &message_id, &source_address, &payload)
             .map_err(|_| VaultError::NotApproved)?;
 
-        if source_chain.to_string() != "base" {
+        let base_str = String::from_str(e, "base");
+        if source_chain != base_str {
             return Err(VaultError::InvalidSourceChain);
         }
 
-        let expected = Self::get_source_address(e).to_string();
-        if source_address.to_lowercase() != expected.to_lowercase() {
+        let expected = Self::get_source_address(e);
+        if source_address != expected {
             return Err(VaultError::InvalidSourceAddress);
         }
 
