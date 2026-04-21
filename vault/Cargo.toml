@@ -6,8 +6,11 @@ edition = "2024"
 [dependencies]
 soroban-sdk = "=25.3.1"
 soroban-env-common = "=25.0.1"
-stellar-axelar-gateway = { version = "=2.0.0", features = ["library"] }
-stellar-axelar-std = "=2.0.0"
+stellar-axelar-gateway = { version = "=2.0.0", features = ["library", "testutils"] }
+stellar-axelar-std = { version = "=2.0.0", features = ["testutils"] }
+
+[dev-dependencies]
+soroban-sdk = { version = "=25.3.1", features = ["testutils"] }
 
 [lib]
 crate-type = ["cdylib", "rlib"]

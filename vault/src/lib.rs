@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(test)]
+extern crate std;
+
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, token::TokenClient, Address, Bytes, Env,
     String,
@@ -67,6 +70,9 @@ impl Vault {
 #[contractimpl]
 impl Vault {
     pub fn init(e: &Env, gateway: Address, source_address: String) {
+        if e.storage().instance().has(&VaultData::Gateway) {
+            panic!("already initialized");
+        }
         e.storage().instance().set(&VaultData::Gateway, &gateway);
         e.storage()
             .instance()

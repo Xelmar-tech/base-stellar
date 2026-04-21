@@ -2,9 +2,11 @@
   "name": "base-stellar",
   "version": "1.0.0",
   "main": "index.js",
+  "description": "Basechain<>Stellar bridge contract",
   "scripts": {
     "deploy": "ts-node src/deploy.ts",
-    "build": "cd vault && cargo build --release --target wasm32v1-none"
+    "build": "cd vault && cargo build --release --target wasm32v1-none",
+    "test": "cd vault && cargo test --test vault"
   },
   "keywords": [],
   "author": "",
@@ -16,7 +18,6 @@
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   },
-  "description": "",
   "devDependencies": {
     "@types/node": "^25.6.0",
     "stellar-cli": "^1.0.3"
