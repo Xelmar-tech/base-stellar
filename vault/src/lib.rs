@@ -53,17 +53,21 @@ impl Vault {
     }
 
     fn parse_payload(payload: &Bytes) -> Result<(Address, Address, i128), VaultError> {
-        if payload.len() < 70 {
-            return Err(VaultError::InvalidPayload);
-        }
-        let token_address = Address::from_string_bytes(&payload.slice(0..35));
-        let recipient = Address::from_string_bytes(&payload.slice(35..70));
+        let token_len = payload.get(0).unwrap() as u32;
+        let token = Address::from_string_bytes(&payload.slice(1..1 + token_len));
+        
+        let recip_offset = 1 + token_len;
+        let recip_len = payload.get(recip_offset).unwrap() as u32;
+        let recipient = Address::from_string_bytes(
+            &payload.slice(recip_offset + 1..recip_offset + 1 + recip_len)
+        );
+        
+        let amount_offset = recip_offset + 1 + recip_len;
         let mut amount: i128 = 0;
-        let amount_bytes = payload.slice(70..payload.len());
-        for i in 0..amount_bytes.len() {
-            amount = (amount << 8) | (amount_bytes.get(i).unwrap() as i128);
+        for i in amount_offset..payload.len() {
+            amount = (amount << 8) | (payload.get(i).unwrap() as i128);
         }
-        Ok((token_address, recipient, amount))
+        Ok((token, recipient, amount))
     }
 }
 
