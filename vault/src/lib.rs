@@ -1,0 +1,104 @@
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, token::TokenClient, Address, Bytes, Env,
+    String,
+};
+use stellar_axelar_gateway::executable::{validate_message, CustomAxelarExecutable};
+use stellar_axelar_std::AxelarExecutable;
+
+#[derive(Clone)]
+#[contracttype]
+pub enum VaultData {
+    Gateway,
+    SourceAddress,
+}
+
+#[contract]
+#[derive(AxelarExecutable)]
+pub struct Vault {}
+
+#[contracterror]
+#[derive(Clone, Debug, PartialEq)]
+pub enum VaultError {
+    NotApproved = 0,
+    InvalidSourceChain = 1,
+    InvalidSourceAddress = 2,
+    TransferFailed = 3,
+    InvalidPayload = 4,
+}
+
+impl Vault {
+    fn get_gateway(e: &Env) -> Address {
+        e.storage()
+            .instance()
+            .get::<_, Address>(&VaultData::Gateway)
+            .unwrap()
+    }
+
+    fn get_source_address(e: &Env) -> String {
+        e.storage()
+            .instance()
+            .get::<_, String>(&VaultData::SourceAddress)
+            .unwrap()
+    }
+
+    fn execute_transfer(e: &Env, token_address: Address, recipient: Address, amount: i128) {
+        let token_client = TokenClient::new(e, &token_address);
+        token_client.transfer(&e.current_contract_address(), &recipient, &amount);
+    }
+
+    fn parse_payload(payload: &Bytes) -> Result<(Address, Address, i128), VaultError> {
+        if payload.len() < 70 {
+            return Err(VaultError::InvalidPayload);
+        }
+        let token_address = Address::from_string_bytes(&payload.slice(0..35));
+        let recipient = Address::from_string_bytes(&payload.slice(35..70));
+        let mut amount: i128 = 0;
+        let amount_bytes = payload.slice(70..payload.len());
+        for i in 0..amount_bytes.len() {
+            amount = (amount << 8) | (amount_bytes.get(i).unwrap() as i128);
+        }
+        Ok((token_address, recipient, amount))
+    }
+}
+
+#[contractimpl]
+impl Vault {
+    pub fn init(e: &Env, gateway: Address, source_address: String) {
+        e.storage().instance().set(&VaultData::Gateway, &gateway);
+        e.storage()
+            .instance()
+            .set(&VaultData::SourceAddress, &source_address);
+    }
+}
+
+impl CustomAxelarExecutable for Vault {
+    type Error = VaultError;
+
+    fn __gateway(e: &Env) -> Address {
+        Vault::get_gateway(e)
+    }
+
+    fn __execute(
+        e: &Env,
+        source_chain: String,
+        message_id: String,
+        source_address: String,
+        payload: Bytes,
+    ) -> Result<(), Self::Error> {
+        validate_message::<Vault>(&e, &source_chain, &message_id, &source_address, &payload)
+            .map_err(|_| VaultError::NotApproved)?;
+
+        if source_chain.to_string() != "base" {
+            return Err(VaultError::InvalidSourceChain);
+        }
+
+        let expected = Self::get_source_address(e).to_string();
+        if source_address.to_lowercase() != expected.to_lowercase() {
+            return Err(VaultError::InvalidSourceAddress);
+        }
+
+        let (token, recipient, amount) = Self::parse_payload(&payload)?;
+        Self::execute_transfer(e, token, recipient, amount);
+        Ok(())
+    }
+}
