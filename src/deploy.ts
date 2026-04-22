@@ -10,13 +10,15 @@ const CONFIG = {
     rpcUrl: "https://soroban-testnet.stellar.org",
     passphrase: "Test SDF Network ; September 2015",
     gateway: "CB2JYOOZPHO43R57TC5PXV22QICKIDC5NKRF62BZG2J6JYFUIQPIAYY3",
-    sourceAddress: "0x2bc09410e67fc8c57b88b5f556f69b648fa0b982", // ensure lower case
+    sourceAddress: "0x2ADD8Efa220880b90e288d0AE37a4c833B28354f",
+    sourceChain: "test-sepolia",
   },
   mainnet: {
     rpcUrl: "https://soroban-rpc.stellar.org",
     passphrase: "Public Global Stellar Network ; September 2015",
     gateway: "CD6VSKXB4HY2DWU7EP2PUIYTBJBJ36LDJXEZN4NSXFYF5YP37DDFX6NF",
     sourceAddress: "0xAcb2e7658371AC8efb0d8e3e306AC59B5e1e6fF9",
+    sourceChain: "base",
   },
 };
 
@@ -84,7 +86,8 @@ function initVault(
     -- \
     init \
     --gateway ${net.gateway} \
-    --source-address ${net.sourceAddress}`;
+    --source-address ${net.sourceAddress} \
+    --source-chain ${net.sourceChain}`;
 
   execSync(cmd, { encoding: "utf8", stdio: "inherit" });
   console.log("✅ Initialized!");

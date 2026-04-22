@@ -1,148 +1,92 @@
-import { createPublicClient, createWalletClient, http, parseUnits, encodeFunctionData } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { execSync } from "child_process";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const USDC_DECIMALS = 6;
-
-const USDC_ABI = [
-  {
-    name: "transfer",
-    type: "function",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    name: "balanceOf",
-    type: "function",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-] as const;
+const STELLAR_RPC_URL = "https://soroban-testnet.stellar.org";
+const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
+const DEFAULT_USDC_ID =
+  "CAZRY5GSFBFXD7H6GAFBA5YGYQTDXU4QKWKMYFWBAZFUCURN3WKX6LF5";
 
 interface FundParams {
-  walletPrivateKey: string;
+  walletSecret: string;
   vaultAddress: string;
   amount?: string;
-  rpcUrl?: string;
+  tokenId?: string;
 }
 
 export async function fundVault(params: FundParams): Promise<string> {
   const {
-    walletPrivateKey,
+    walletSecret,
     vaultAddress,
     amount = "10",
-    rpcUrl = process.env.BASE_RPC_URL || "https://base-sepolia-public-rpc.sh",
+    tokenId = DEFAULT_USDC_ID,
   } = params;
 
-  // USDC on Base Sepolia
-  const usdcAddress = "0xCaZRY5GSfbFXd7H6gAFBA5YGYQTDXU4QKWKMYFWBAZFUCURN3WKX6LF5";
+  console.log(`💰 Funding Stellar vault: ${vaultAddress}`);
+  console.log(`   Amount: ${amount} token`);
+  console.log(`   Token ID: ${tokenId}`);
+  console.log(
+    `   From wallet: ${walletSecret.slice(0, 4)}...${walletSecret.slice(-4)}`,
+  );
 
-  const account = privateKeyToAccount(walletPrivateKey as `0x${string}`);
-  const wallet = createWalletClient({
-    account,
-    chain: {
-      id: 84532,
-      name: "Base Sepolia",
-      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-      rpcUrls: { default: { http: [rpcUrl] } },
-    },
-    transport: http(rpcUrl),
-  });
+  // Parse amount (USDC/Tokens on Stellar use 7 decimals)
+  const amountScaled = Math.floor(parseFloat(amount) * 1e7);
 
-  const publicClient = createPublicClient({
-    chain: {
-      id: 84532,
-      name: "Base Sepolia",
-      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-      rpcUrls: { default: { http: [rpcUrl] } },
-    },
-    transport: http(rpcUrl),
-  });
+  const cmd = `stellar contract invoke \
+    --id ${tokenId} \
+    --source-account "${walletSecret}" \
+    --rpc-url "${STELLAR_RPC_URL}" \
+    --network-passphrase "${NETWORK_PASSPHRASE}" \
+    -- \
+    transfer \
+    --from "${walletSecret}" \
+    --to "${vaultAddress}" \
+    --amount "${amountScaled}"`;
 
-  // Parse amount (default 10 USDC with 6 decimals)
-  const amountWei = parseUnits(amount, USDC_DECIMALS);
-
-  console.log(`💰 Funding vault: ${vaultAddress}`);
-  console.log(`   Amount: ${amount} USDC (${amountWei})`);
-  console.log(`   From: ${account.address}`);
-
-  // Check balance first
-  const balance = await publicClient.readContract({
-    address: usdcAddress,
-    abi: USDC_ABI,
-    functionName: "balanceOf",
-    args: [account.address as `0x${string}`],
-  });
-
-  console.log(`   Your USDC balance: ${balance}`);
-
-  if (balance < amountWei) {
-    throw new Error(`Insufficient USDC balance! Have ${balance}, need ${amountWei}`);
+  try {
+    const output = execSync(cmd, { encoding: "utf8" });
+    console.log(`✅ Funded! ${output}`);
+    return output;
+  } catch (e: any) {
+    console.error(`Error: ${e.message}`);
+    console.log(
+      `\n💡 If token contract not found, use correct USDC contract ID:`,
+    );
+    console.log(
+      `   npx ts-node src/fundVault.ts <vaultAddress> <amount> <tokenContractId>`,
+    );
+    throw e;
   }
-
-  const calldata = encodeFunctionData({
-    abi: USDC_ABI,
-    functionName: "transfer",
-    args: [vaultAddress as `0x${string}`, amountWei],
-  });
-
-  const hash = await wallet.sendTransaction({
-    to: usdcAddress as `0x${string}`,
-    data: calldata,
-  });
-
-  console.log(`✅ Funded! Transaction: ${hash}`);
-
-  // Verify
-  const newBalance = await publicClient.readContract({
-    address: usdcAddress,
-    abi: USDC_ABI,
-    functionName: "balanceOf",
-    args: [vaultAddress as `0x${string}`],
-  });
-
-  console.log(`   Vault USDC balance: ${newBalance}`);
-
-  return hash;
 }
 
 async function main() {
   const args = process.argv.slice(2);
-  let vaultAddress = process.env.VAULT_ADDRESS;
   let amount = "10";
+  let tokenId = DEFAULT_USDC_ID;
 
-  // Parse args: npx ts-node src/fundVault.ts <vaultAddress> [amount]
-  if (args.length > 0) {
-    vaultAddress = args[0];
-  }
-  if (args.length > 1) {
-    amount = args[1];
-  }
+  const vaultAddress = args[0];
+  if (args.length > 1) amount = args[1];
 
-  const walletPrivateKey = process.env.WALLET_PRIVATE_KEY;
+  const walletSecret = process.env.WALLET_SECRET;
 
-  if (!walletPrivateKey) {
-    console.error("Missing WALLET_PRIVATE_KEY in .env");
+  if (!walletSecret) {
+    console.error("Missing WALLET_SECRET in .env");
     process.exit(1);
   }
   if (!vaultAddress) {
-    console.error("Usage: npx ts-node src/fundVault.ts <vaultAddress> [amount]");
-    console.error("  or set VAULT_ADDRESS in .env");
+    console.error(
+      "Usage: npx ts-node src/fundVault.ts <vaultAddress> [amount] [tokenContractId]",
+    );
+    console.error("  vaultAddress: Your Stellar vault contract ID");
+    console.error("  amount: Amount to fund (default: 10)");
+    console.error(
+      "  tokenContractId: Token contract ID (optional, defaults to USDC testnet)",
+    );
     process.exit(1);
   }
 
-  await fundVault({
-    walletPrivateKey,
-    vaultAddress,
-    amount,
-  });
+  await fundVault({ walletSecret, vaultAddress, amount, tokenId });
 }
 
 main().catch(console.error);
