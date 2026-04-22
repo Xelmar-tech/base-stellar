@@ -55,13 +55,13 @@ impl Vault {
     fn parse_payload(payload: &Bytes) -> Result<(Address, Address, i128), VaultError> {
         let token_len = payload.get(0).unwrap() as u32;
         let token = Address::from_string_bytes(&payload.slice(1..1 + token_len));
-        
+
         let recip_offset = 1 + token_len;
         let recip_len = payload.get(recip_offset).unwrap() as u32;
         let recipient = Address::from_string_bytes(
-            &payload.slice(recip_offset + 1..recip_offset + 1 + recip_len)
+            &payload.slice(recip_offset + 1..recip_offset + 1 + recip_len),
         );
-        
+
         let amount_offset = recip_offset + 1 + recip_len;
         let mut amount: i128 = 0;
         for i in amount_offset..payload.len() {
@@ -101,7 +101,7 @@ impl CustomAxelarExecutable for Vault {
         validate_message::<Vault>(&e, &source_chain, &message_id, &source_address, &payload)
             .map_err(|_| VaultError::NotApproved)?;
 
-        let base_str = String::from_str(e, "base");
+        let base_str = String::from_str(e, "base-sepolia");
         if source_chain != base_str {
             return Err(VaultError::InvalidSourceChain);
         }

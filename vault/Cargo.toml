@@ -1,19 +1,25 @@
 [package]
 name = "vault"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
 
 [dependencies]
-soroban-sdk = "=25.3.1"
-soroban-env-common = "=25.0.1"
-stellar-axelar-gateway = { version = "=2.0.0", features = ["library", "testutils"] }
-stellar-axelar-std = { version = "=2.0.0", features = ["testutils"] }
+soroban-sdk = { version = "=25.3.1", features = ["alloc"] }
+stellar-axelar-gateway = { git = "https://github.com/axelarnetwork/axelar-amplifier-stellar", subdir = "contracts/stellar-axelar-gateway", features = ["library"] }
+stellar-axelar-gas-service = { git = "https://github.com/axelarnetwork/axelar-amplifier-stellar", subdir = "contracts/stellar-axelar-gas-service", features = ["library"] }
+stellar-axelar-std = { git = "https://github.com/axelarnetwork/axelar-amplifier-stellar", subdir = "packages/stellar-axelar-std" }
 
 [dev-dependencies]
 soroban-sdk = { version = "=25.3.1", features = ["testutils"] }
 
-[lib]
-crate-type = ["cdylib", "rlib"]
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
 
 [profile.release]
 overflow-checks = true

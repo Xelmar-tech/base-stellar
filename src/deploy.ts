@@ -10,7 +10,7 @@ const CONFIG = {
     rpcUrl: "https://soroban-testnet.stellar.org",
     passphrase: "Test SDF Network ; September 2015",
     gateway: "CB2JYOOZPHO43R57TC5PXV22QICKIDC5NKRF62BZG2J6JYFUIQPIAYY3",
-    sourceAddress: "0xE7fc2C2ccea91c5Ce55a6819CDEe315AA9BA12e6",
+    sourceAddress: "0x2bc09410e67fc8c57b88b5f556f69b648fa0b982", // ensure lower case
   },
   mainnet: {
     rpcUrl: "https://soroban-rpc.stellar.org",
@@ -27,17 +27,16 @@ function buildVault(): string {
 
   const vaultDir = path.join(__dirname, "..", "vault");
 
-  execSync(
-    `cd "${vaultDir}" && cargo build --release --target wasm32v1-none`,
-    { stdio: "inherit" }
-  );
+  execSync(`cd "${vaultDir}" && cargo build --release --target wasm32v1-none`, {
+    stdio: "inherit",
+  });
 
   const wasmPath = path.join(
     vaultDir,
     "target",
     "wasm32v1-none",
     "release",
-    "vault.wasm"
+    "vault.wasm",
   );
 
   if (!fs.existsSync(wasmPath)) {
@@ -48,10 +47,14 @@ function buildVault(): string {
   return wasmPath;
 }
 
-function deployVault(wasmPath: string, walletSecret: string, network: Network): string {
+function deployVault(
+  wasmPath: string,
+  walletSecret: string,
+  network: Network,
+): string {
   console.log("🚀 Deploying vault...");
 
-const net = CONFIG[network];
+  const net = CONFIG[network];
   const cmd = `stellar contract deploy --source-account "${walletSecret}" --wasm "${wasmPath}" --rpc-url "${net.rpcUrl}" --network-passphrase "${net.passphrase}"`;
 
   const output = execSync(cmd, { encoding: "utf8", stdio: "pipe" });
@@ -65,7 +68,11 @@ const net = CONFIG[network];
   return contractId;
 }
 
-function initVault(contractId: string, walletSecret: string, network: Network): void {
+function initVault(
+  contractId: string,
+  walletSecret: string,
+  network: Network,
+): void {
   console.log("🔧 Initializing vault...");
 
   const net = CONFIG[network];

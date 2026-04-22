@@ -24,12 +24,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.102"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
-
-[[package]]
 name = "arbitrary"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -478,12 +472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diff"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -652,21 +640,6 @@ dependencies = [
  "libc",
  "wasi",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "goldie"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa70c42797cac60e6182e00f33f629212e02ba80d67e8a976f6168b57568d78e"
-dependencies = [
- "anyhow",
- "once_cell",
- "pretty_assertions",
- "serde",
- "serde_json",
- "upon",
- "yansi",
 ]
 
 [[package]]
@@ -991,16 +964,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "pretty_assertions"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
-dependencies = [
- "diff",
- "yansi",
 ]
 
 [[package]]
@@ -1509,26 +1472,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "stellar-axelar-gateway"
+name = "stellar-axelar-gas-service"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fa678dc9adaaa35e52ad310586806aa4e7c8c7c5e1f4b72739aa816a638f42b"
+source = "git+https://github.com/axelarnetwork/axelar-amplifier-stellar#25356fe149921c43c131056118dfb65861aea6f7"
 dependencies = [
  "cfg-if",
- "ed25519-dalek",
- "rand",
+ "stellar-axelar-std",
+]
+
+[[package]]
+name = "stellar-axelar-gateway"
+version = "2.0.0"
+source = "git+https://github.com/axelarnetwork/axelar-amplifier-stellar#25356fe149921c43c131056118dfb65861aea6f7"
+dependencies = [
+ "cfg-if",
  "stellar-axelar-std",
 ]
 
 [[package]]
 name = "stellar-axelar-std"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89352fadd1bbab45a36fcea0640b0a240446976452c9fff89f370662be66c3ca"
+source = "git+https://github.com/axelarnetwork/axelar-amplifier-stellar#25356fe149921c43c131056118dfb65861aea6f7"
 dependencies = [
- "goldie",
- "hex",
- "serde",
  "soroban-sdk",
  "stellar-axelar-std-derive",
 ]
@@ -1536,8 +1501,7 @@ dependencies = [
 [[package]]
 name = "stellar-axelar-std-derive"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a8b9d8b5c15bd5a22a8b8107f5af1401d3e6666a05e8bafe44b489297973de5"
+source = "git+https://github.com/axelarnetwork/axelar-amplifier-stellar#25356fe149921c43c131056118dfb65861aea6f7"
 dependencies = [
  "heck",
  "itertools 0.14.0",
@@ -1685,28 +1649,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
-name = "unicode-width"
-version = "0.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
-
-[[package]]
-name = "upon"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fe29601d1624f104fa9a35ea71a5f523dd8bd1cfc8c31f8124ad2b829f013c0"
-dependencies = [
- "serde",
- "unicode-ident",
- "unicode-width",
-]
-
-[[package]]
 name = "vault"
 version = "0.1.0"
 dependencies = [
- "soroban-env-common",
  "soroban-sdk",
+ "stellar-axelar-gas-service",
  "stellar-axelar-gateway",
  "stellar-axelar-std",
 ]
@@ -1874,12 +1821,6 @@ checksum = "7837d08f69c77cf6b07689544538e017c1bfcf57e34b4c0ff58e6c2cd3b37091"
 dependencies = [
  "windows-link",
 ]
-
-[[package]]
-name = "yansi"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"
