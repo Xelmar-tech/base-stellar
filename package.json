@@ -16,7 +16,8 @@
     "@stellar/stellar-sdk": "^15.0.1",
     "dotenv": "^17.4.2",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "viem": "^2.48.4"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

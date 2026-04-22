@@ -107,8 +107,28 @@ impl CustomAxelarExecutable for Vault {
         }
 
         let expected = Self::get_source_address(e);
-        if source_address != expected {
+        // Case-insensitive compare
+        let e_bytes = expected.to_bytes();
+        let s_bytes = source_address.to_bytes();
+        if e_bytes.len() != s_bytes.len() {
             return Err(VaultError::InvalidSourceAddress);
+        }
+        for i in 0..e_bytes.len() {
+            let e_b = e_bytes.get(i).unwrap_or(0);
+            let s_b = s_bytes.get(i).unwrap_or(0);
+            let e_lower = if e_b >= 65 && e_b <= 90 {
+                e_b + 32
+            } else {
+                e_b
+            };
+            let s_lower = if s_b >= 65 && s_b <= 90 {
+                s_b + 32
+            } else {
+                s_b
+            };
+            if e_lower != s_lower {
+                return Err(VaultError::InvalidSourceAddress);
+            }
         }
 
         let (token, recipient, amount) = Self::parse_payload(&payload)?;
