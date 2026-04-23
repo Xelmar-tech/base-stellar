@@ -63,14 +63,14 @@ function extractContractId(result: Api.GetSuccessfulTransactionResponse) {
   return addr;
 }
 
-export async function deployVault() {
+export async function deployVault(orgId: string, saltHex: string) {
   const keypair = Keypair.fromSecret(process.env.WALLET_SECRET!);
   const server = new Server(cfg.rpcUrl);
   const horizon = new Horizon.Server("https://horizon.stellar.org"); // for account loading
 
   // ── Step 1: Instantiate from existing WASM hash ──────────────────────────
   const account = await horizon.loadAccount(keypair.publicKey());
-  const salt = crypto.getRandomValues(new Uint8Array(32));
+  const salt = Buffer.from(saltHex, "hex");
 
   const deployTx = new TransactionBuilder(account, {
     fee: BASE_FEE,

@@ -11,7 +11,8 @@ app.use(cors({ origin: ["https://paynest.xyz", "http://localhost:3000"] }));
 
 app.post("/deploy-vault", async (req, res) => {
   try {
-    const vaultAddress = await deployVault();
+    const { saltHex, orgId } = req.body;
+    const vaultAddress = await deployVault(orgId, saltHex);
     res.json({ vaultAddress });
   } catch (error) {
     console.error(error);
