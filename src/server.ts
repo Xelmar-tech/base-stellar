@@ -6,12 +6,22 @@ import { precomputeContractId } from "./impl";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const apiKey = process.env.API_KEY;
+
+if (!apiKey) {
+  console.error("API_KEY is not set in environment variables");
+  process.exit(1);
+}
 
 app.use(express.json());
 app.use(cors({ origin: ["https://paynest.xyz", "http://localhost:3000"] }));
 
 app.post("/deploy-vault", async (req, res) => {
   try {
+    const key = req.headers["x-api-key"];
+    if (key !== apiKey) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const { orgId } = req.body;
 
     const salt = crypto.getRandomValues(new Uint8Array(32));
