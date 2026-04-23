@@ -1,21 +1,27 @@
-import { createWalletClient, http, encodeFunctionData } from "viem";
+import {
+  createWalletClient,
+  createPublicClient,
+  http,
+  encodeFunctionData,
+  parseEther,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
 const VAULT_ABI = [
   {
-    name: "registerVault",
     type: "function",
+    name: "registerVault",
     inputs: [{ name: "stellarVault", type: "string", internalType: "string" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
-    name: "withdrawFromVault",
     type: "function",
+    name: "withdrawFromVault",
     inputs: [
       { name: "stellarToken", type: "string", internalType: "string" },
       { name: "amount", type: "uint256", internalType: "uint256" },
@@ -26,18 +32,37 @@ const VAULT_ABI = [
   },
 ] as const;
 
-const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
-const rpcUrl = process.env.RPC_URL as string;
-const client = createWalletClient({
-  account,
-  chain: sepolia,
-  transport: http(rpcUrl),
-});
-const vaultAddress = "0x2ADD8Efa220880b90e288d0AE37a4c833B28354f";
-const token = "CAZRY5GSFBFXD7H6GAFBA5YGYQTDXU4QKWKMYFWBAZFUCURN3WKX6LF5";
+const vaultAddress = process.env.VAULT_ADDRESS as `0x${string}`;
+const token =
+  process.env.STELLAR_TOKEN ||
+  "CAZRY5GSFBFXD7H6gAFBA5YGYQTDXU4QKWKMYFWBAZFUCUrN3WKX6Lf5";
 const destXlm = "GAESXUSMJDAVQ2TQDN4XSWJO4NA7JGV6FKUKYKXXVXD57A6U7R6OQLXF";
 
+async function getClients() {
+  const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
+  const rpcUrl = process.env.RPC_URL;
+
+  if (!rpcUrl) {
+    throw new Error("Missing RPC_URL in .env");
+  }
+
+  const client = createWalletClient({
+    account,
+    chain: baseSepolia, // Use Base Sepolia chain
+    transport: http(rpcUrl),
+  });
+
+  const publicClient = createPublicClient({
+    chain: baseSepolia,
+    transport: http(rpcUrl),
+  });
+
+  return { client, publicClient, account, rpcUrl };
+}
+
 export async function registerVault(stellarVault: string): Promise<string> {
+  const { client } = await getClients();
+
   console.log(`📝 Registering Stellar vault: ${stellarVault}`);
   console.log(`🛠️  EVM vault address: ${vaultAddress}`);
 
@@ -47,17 +72,24 @@ export async function registerVault(stellarVault: string): Promise<string> {
     args: [stellarVault],
   });
 
-  const hash = await client.sendTransaction({
-    to: vaultAddress,
-    data: calldata,
-  });
+  try {
+    const hash = await client.sendTransaction({
+      to: vaultAddress,
+      data: calldata,
+      value: parseEther("0.001"), // Send some ETH to cover future fees
+    });
 
-  console.log(`✅ Registered! Transaction: ${hash}`);
-
-  return hash;
+    console.log(`✅ Registered! Transaction: ${hash}`);
+    return hash;
+  } catch (e: any) {
+    console.error(`Transaction failed: ${e.message}`);
+    throw e;
+  }
 }
 
 export async function withdrawFromVault(amount: bigint): Promise<string> {
+  const { client } = await getClients();
+
   console.log(`💸 Requesting withdrawal:`);
   console.log(`   Token: ${token}`);
   console.log(`   Amount: ${amount}`);
@@ -69,14 +101,19 @@ export async function withdrawFromVault(amount: bigint): Promise<string> {
     args: [token, amount, destXlm],
   });
 
-  const hash = await client.sendTransaction({
-    to: vaultAddress,
-    data: calldata,
-  });
+  try {
+    const hash = await client.sendTransaction({
+      to: vaultAddress,
+      data: calldata,
+      value: parseEther("0.001"), // Send some ETH to cover fees
+    });
 
-  console.log(`✅ Withdrawal initiated! Transaction: ${hash}`);
-
-  return hash;
+    console.log(`✅ Withdrawal initiated! Transaction: ${hash}`);
+    return hash;
+  } catch (e: any) {
+    console.error(`Transaction failed: ${e.message}`);
+    throw e;
+  }
 }
 
 async function main() {
@@ -88,25 +125,31 @@ async function main() {
     process.exit(1);
   }
 
+  if (!vaultAddress) {
+    console.error("Missing VAULT_ADDRESS in .env");
+    process.exit(1);
+  }
+
   const action = process.env.ACTION;
 
   if (action === "register") {
-    const stellarVault = args[0];
+    const stellarVault = args[0] || process.env.STELLAR_VAULT;
     if (!stellarVault) {
       console.error(
         "Usage: ACTION=register npx ts-node src/script.ts <stellarVaultAddress>",
       );
+      console.error("  or set STELLAR_VAULT in .env");
       process.exit(1);
     }
 
     await registerVault(stellarVault);
   } else if (action === "withdraw") {
-    const amount = BigInt("1000000"); // 0.1 USDC
+    const amount = BigInt(process.env.AMOUNT || "1000000"); // 1 USDC
 
     await withdrawFromVault(amount);
   } else {
     console.log("Usage:");
-    console.log("  ACTION=register npx ts-node src/script.ts");
+    console.log("  ACTION=register npx ts-node src/script.ts <stellarVault>");
     console.log("  ACTION=withdraw npx ts-node src/script.ts");
   }
 }

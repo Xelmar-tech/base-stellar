@@ -10,8 +10,8 @@ const CONFIG = {
     rpcUrl: "https://soroban-testnet.stellar.org",
     passphrase: "Test SDF Network ; September 2015",
     gateway: "CB2JYOOZPHO43R57TC5PXV22QICKIDC5NKRF62BZG2J6JYFUIQPIAYY3",
-    sourceAddress: "0x2ADD8Efa220880b90e288d0AE37a4c833B28354f",
-    sourceChain: "test-sepolia",
+    sourceAddress: "0xa636f92997cd7d6137a5eDb6E110dE03dc7ac0DA",
+    sourceChain: "base-sepolia",
   },
   mainnet: {
     rpcUrl: "https://soroban-rpc.stellar.org",
@@ -94,6 +94,7 @@ function initVault(
 }
 
 async function main() {
+  console.time("Total deployment time");
   const walletSecret = process.env.WALLET_SECRET;
   const network = (process.env.NETWORK as Network) || "testnet";
 
@@ -118,10 +119,18 @@ async function main() {
   console.log(`📝 Gateway: ${net.gateway}`);
   console.log(`📝 Source:  ${net.sourceAddress}`);
 
+  console.time("Build");
   const wasmPath = buildVault();
-  const contractId = deployVault(wasmPath, walletSecret, network);
-  initVault(contractId, walletSecret, network);
+  console.timeEnd("Build");
 
+  console.time("Deploy");
+  const contractId = deployVault(wasmPath, walletSecret, network);
+  console.timeEnd("Deploy");
+
+  console.time("Init");
+  initVault(contractId, walletSecret, network);
+  console.timeEnd("Init");
+  console.timeEnd("Total deployment time");
   console.log(`\n✨ Vault deployed at: ${contractId}`);
   console.log(`   Add this to your Base calling contract: ${contractId}`);
 }

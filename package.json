@@ -6,7 +6,9 @@
   "scripts": {
     "deploy": "ts-node src/deploy.ts",
     "build": "cd vault && cargo build --release --target wasm32v1-none",
-    "test": "cd vault && cargo test --test vault"
+    "test": "cd vault && cargo test --test vault",
+    "script-deploy": "ts-node src/script-deploy.ts",
+    "server": "ts-node src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,12 +16,16 @@
   "dependencies": {
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^15.0.1",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
+    "express": "^4.21.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
     "viem": "^2.48.4"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
     "@types/node": "^25.6.0",
     "stellar-cli": "^1.0.3"
   }
