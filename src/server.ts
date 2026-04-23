@@ -28,7 +28,7 @@ app.post("/deploy-vault", async (req, res) => {
     const saltHex = Buffer.from(salt).toString("hex");
 
     events.emit("deploy", { orgId, saltHex });
-    const vaultAddress = precomputeContractId(salt);
+    const vaultAddress = precomputeContractId(saltHex);
     res.json({ vaultAddress });
   } catch (error) {
     console.error(error);

@@ -3,10 +3,10 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const STELLAR_RPC_URL = "https://soroban-testnet.stellar.org";
-const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
+const STELLAR_RPC_URL = "https://rpc.ankr.com/stellar_soroban";
+const NETWORK_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 const DEFAULT_USDC_ID =
-  "CAZRY5GSFBFXD7H6GAFBA5YGYQTDXU4QKWKMYFWBAZFUCURN3WKX6LF5";
+  "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 
 interface FundParams {
   walletSecret: string;
@@ -62,7 +62,7 @@ export async function fundVault(params: FundParams): Promise<string> {
 
 async function main() {
   const args = process.argv.slice(2);
-  let amount = "10";
+  let amount = "1";
   let tokenId = DEFAULT_USDC_ID;
 
   const vaultAddress = args[0];

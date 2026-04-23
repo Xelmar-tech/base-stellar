@@ -12,7 +12,7 @@ import {
   Horizon,
 } from "@stellar/stellar-sdk";
 import { hash } from "@stellar/stellar-base";
-import { Api, Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
+import { Api, Server, assembleTransaction, Durability } from "@stellar/stellar-sdk/rpc";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -26,35 +26,59 @@ const cfg = {
   wasmHash: "354d8735ca76ce9a0ca6895646b7c7a0dfc0e93929897a749212b8852ca403aa",
 };
 
-async function pollTransaction(server: Server, hash: string) {
-  for (let i = 0; i < 20; i++) {
-    const result = await server.getTransaction(hash);
-    if (result.status === "SUCCESS") return result;
-    if (result.status === "FAILED")
-      throw new Error(`Transaction failed: ${hash}`);
-    await new Promise((r) => setTimeout(r, 3000));
+async function pollTransaction(
+  server: Server,
+  txHash: string,
+  maxAttempts = 60,
+  intervalMs = 3000,
+) {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const result = await server.getTransaction(txHash);
+      if (result.status === "SUCCESS") return result;
+      if (result.status === "FAILED")
+        throw new Error(`Transaction failed: ${txHash}`);
+    } catch (e) {
+      if (i === maxAttempts - 1) throw e;
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error(`Transaction not confirmed after 60s: ${hash}`);
+  throw new Error(`Transaction not confirmed after ${(maxAttempts * intervalMs) / 1000}s: ${txHash}`);
 }
 
-async function submitAndWait(
+async function submitWithRetry(
   server: Server,
   keypair: Keypair,
   tx: Transaction,
-) {
-  const simulated = await server.simulateTransaction(tx);
-  if ("error" in simulated)
-    throw new Error(`Simulation failed: ${simulated.error}`);
+  maxRetries = 3,
+): Promise<Api.GetSuccessfulTransactionResponse> {
+  let lastError: Error | null = null;
 
-  const prepared = assembleTransaction(tx, simulated).build();
-  prepared.sign(keypair);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const simulated = await server.simulateTransaction(tx);
+      if ("error" in simulated)
+        throw new Error(`Simulation failed: ${simulated.error}`);
 
-  const { hash } = await server.sendTransaction(prepared);
-  return pollTransaction(server, hash);
+      const prepared = assembleTransaction(tx, simulated).build();
+      prepared.sign(keypair);
+
+      const { hash: txHash } = await server.sendTransaction(prepared);
+      return await pollTransaction(server, txHash);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      console.error(`Attempt ${attempt}/${maxRetries} failed: ${lastError.message}`);
+      if (attempt < maxRetries) {
+        const backoff = attempt * 5000;
+        console.log(`Retrying in ${backoff / 1000}s...`);
+        await new Promise((r) => setTimeout(r, backoff));
+      }
+    }
+  }
+  throw lastError || new Error("Transaction failed");
 }
 
 function extractContractId(result: Api.GetSuccessfulTransactionResponse) {
-  // Contract ID is in the transaction result's returnValue
   const returnVal = result.returnValue;
   if (!returnVal) throw new Error("No return value in deploy result");
   const addr = scValToNative(returnVal);
@@ -64,12 +88,53 @@ function extractContractId(result: Api.GetSuccessfulTransactionResponse) {
   return addr;
 }
 
-export async function deployVault(saltHex: string) {
+export function precomputeContractId(saltHex: string): string {
+  const keypair = Keypair.fromSecret(process.env.WALLET_SECRET!);
+  const deployerPublicKey = keypair.publicKey();
+  const salt = Buffer.from(saltHex, "hex");
+
+  const networkId = hash(Buffer.from(Networks.PUBLIC));
+  const preimage = xdr.HashIdPreimage.envelopeTypeContractId(
+    new xdr.HashIdPreimageContractId({
+      networkId,
+      contractIdPreimage: xdr.ContractIdPreimage.contractIdPreimageFromAddress(
+        new xdr.ContractIdPreimageFromAddress({
+          address: Address.fromString(deployerPublicKey).toScAddress(),
+          salt: Buffer.from(salt),
+        }),
+      ),
+    }),
+  );
+  return Address.contract(hash(preimage.toXDR())).toString();
+}
+
+async function isContractInitialized(
+  server: Server,
+  contractId: string,
+): Promise<boolean> {
+  try {
+    const key = xdr.ScVal.scvSymbol("init");
+    const result = await server.getContractData(contractId, key, Durability.Persistent);
+    return result.val !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+export async function deployVault(saltHex: string): Promise<string> {
   const keypair = Keypair.fromSecret(process.env.WALLET_SECRET!);
   const server = new Server(cfg.rpcUrl);
-  const horizon = new Horizon.Server("https://horizon.stellar.org"); // for account loading
+  const horizon = new Horizon.Server("https://horizon.stellar.org");
 
-  // ── Step 1: Instantiate from existing WASM hash ──────────────────────────
+  const contractId = precomputeContractId(saltHex);
+  console.log(`Precomputed contract ID: ${contractId}`);
+
+  const alreadyInitialized = await isContractInitialized(server, contractId);
+  if (alreadyInitialized) {
+    console.log(`Contract ${contractId} already initialized`);
+    return contractId;
+  }
+
   const account = await horizon.loadAccount(keypair.publicKey());
   const salt = Buffer.from(saltHex, "hex");
 
@@ -101,11 +166,10 @@ export async function deployVault(saltHex: string) {
     .setTimeout(30)
     .build();
 
-  const deployResult = await submitAndWait(server, keypair, deployTx);
-  const contractId = extractContractId(deployResult);
-  console.log(`Contract deployed: ${contractId}`);
+  const deployResult = await submitWithRetry(server, keypair, deployTx);
+  const deployedContractId = extractContractId(deployResult);
+  console.log(`Contract deployed: ${deployedContractId}`);
 
-  // ── Step 2: Init ─────────────────────────────────────────────────────────
   const freshAccount = await horizon.loadAccount(keypair.publicKey());
 
   const initTx = new TransactionBuilder(freshAccount, {
@@ -114,7 +178,7 @@ export async function deployVault(saltHex: string) {
   })
     .addOperation(
       Operation.invokeContractFunction({
-        contract: contractId,
+        contract: deployedContractId,
         function: "init",
         args: [
           nativeToScVal(cfg.gateway, { type: "address" }),
@@ -126,27 +190,8 @@ export async function deployVault(saltHex: string) {
     .setTimeout(30)
     .build();
 
-  await submitAndWait(server, keypair, initTx);
-  console.log(`Vault initialized: ${contractId}`);
+  await submitWithRetry(server, keypair, initTx);
+  console.log(`Vault initialized: ${deployedContractId}`);
 
-  return contractId;
-}
-
-export function precomputeContractId(salt: Uint8Array): string {
-  const keypair = Keypair.fromSecret(process.env.WALLET_SECRET!);
-  const deployerPublicKey = keypair.publicKey();
-
-  const networkId = hash(Buffer.from(Networks.PUBLIC));
-  const preimage = xdr.HashIdPreimage.envelopeTypeContractId(
-    new xdr.HashIdPreimageContractId({
-      networkId,
-      contractIdPreimage: xdr.ContractIdPreimage.contractIdPreimageFromAddress(
-        new xdr.ContractIdPreimageFromAddress({
-          address: Address.fromString(deployerPublicKey).toScAddress(),
-          salt: Buffer.from(salt),
-        }),
-      ),
-    }),
-  );
-  return Address.contract(hash(preimage.toXDR())).toString();
+  return deployedContractId;
 }
