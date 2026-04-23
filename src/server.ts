@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { getVaultBalances } from "./balances";
-import { deployVault } from "./impl";
+import events from "./events";
+import { precomputeContractId } from "./impl";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -11,8 +12,13 @@ app.use(cors({ origin: ["https://paynest.xyz", "http://localhost:3000"] }));
 
 app.post("/deploy-vault", async (req, res) => {
   try {
-    const { saltHex, orgId } = req.body;
-    const vaultAddress = await deployVault(orgId, saltHex);
+    const { orgId } = req.body;
+
+    const salt = crypto.getRandomValues(new Uint8Array(32));
+    const saltHex = Buffer.from(salt).toString("hex");
+
+    events.emit("deploy", { orgId, saltHex });
+    const vaultAddress = precomputeContractId(salt);
     res.json({ vaultAddress });
   } catch (error) {
     console.error(error);

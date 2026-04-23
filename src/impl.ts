@@ -11,6 +11,7 @@ import {
   Transaction,
   Horizon,
 } from "@stellar/stellar-sdk";
+import { hash } from "@stellar/stellar-base";
 import { Api, Server, assembleTransaction } from "@stellar/stellar-sdk/rpc";
 import * as dotenv from "dotenv";
 
@@ -63,7 +64,7 @@ function extractContractId(result: Api.GetSuccessfulTransactionResponse) {
   return addr;
 }
 
-export async function deployVault(orgId: string, saltHex: string) {
+export async function deployVault(saltHex: string) {
   const keypair = Keypair.fromSecret(process.env.WALLET_SECRET!);
   const server = new Server(cfg.rpcUrl);
   const horizon = new Horizon.Server("https://horizon.stellar.org"); // for account loading
@@ -129,4 +130,23 @@ export async function deployVault(orgId: string, saltHex: string) {
   console.log(`Vault initialized: ${contractId}`);
 
   return contractId;
+}
+
+export function precomputeContractId(salt: Uint8Array): string {
+  const keypair = Keypair.fromSecret(process.env.WALLET_SECRET!);
+  const deployerPublicKey = keypair.publicKey();
+
+  const networkId = hash(Buffer.from(Networks.PUBLIC));
+  const preimage = xdr.HashIdPreimage.envelopeTypeContractId(
+    new xdr.HashIdPreimageContractId({
+      networkId,
+      contractIdPreimage: xdr.ContractIdPreimage.contractIdPreimageFromAddress(
+        new xdr.ContractIdPreimageFromAddress({
+          address: Address.fromString(deployerPublicKey).toScAddress(),
+          salt: Buffer.from(salt),
+        }),
+      ),
+    }),
+  );
+  return Address.contract(hash(preimage.toXDR())).toString();
 }
