@@ -14,7 +14,7 @@ const CONFIG = {
     sourceChain: "base-sepolia",
   },
   mainnet: {
-    rpcUrl: "https://soroban-rpc.stellar.org",
+    rpcUrl: "https://rpc.ankr.com/stellar_soroban",
     passphrase: "Public Global Stellar Network ; September 2015",
     gateway: "CD6VSKXB4HY2DWU7EP2PUIYTBJBJ36LDJXEZN4NSXFYF5YP37DDFX6NF",
     sourceAddress: "0x1fC2276Cf55574236340Db742658b972D5320d7a",
