@@ -1,29 +1,20 @@
 import express from "express";
 import cors from "cors";
-import { deployVaultForUser, loadWasm } from "./script-deploy";
 import { getVaultBalances } from "./balances";
+import { deployVault } from "./impl";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-
-let wasmPath: string;
-
-try {
-  wasmPath = loadWasm();
-} catch (e) {
-  console.error("Failed to load WASM:", e);
-  process.exit(1);
-}
 
 app.use(express.json());
 app.use(cors({ origin: ["https://paynest.xyz", "http://localhost:3000"] }));
 
 app.post("/deploy-vault", async (req, res) => {
   try {
-    const network = (req.body.network as "testnet" | "mainnet") || "testnet";
-    const vaultAddress = await deployVaultForUser(network, wasmPath);
+    const vaultAddress = await deployVault();
     res.json({ vaultAddress });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
