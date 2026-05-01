@@ -67,6 +67,7 @@ async function main() {
 
   const vaultAddress = args[0];
   if (args.length > 1) amount = args[1];
+  if (args.length > 2) tokenId = args[2];
 
   const walletSecret = process.env.WALLET_SECRET;
 

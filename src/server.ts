@@ -23,6 +23,11 @@ app.post("/deploy-vault", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
     const { orgId } = req.body;
+    if (!orgId) {
+      return res
+        .status(400)
+        .json({ error: "Missing organization identity in request body" });
+    }
 
     const salt = crypto.getRandomValues(new Uint8Array(32));
     const saltHex = Buffer.from(salt).toString("hex");

@@ -12,7 +12,12 @@ import {
   Horizon,
 } from "@stellar/stellar-sdk";
 import { hash } from "@stellar/stellar-base";
-import { Api, Server, assembleTransaction, Durability } from "@stellar/stellar-sdk/rpc";
+import {
+  Api,
+  Server,
+  assembleTransaction,
+  Durability,
+} from "@stellar/stellar-sdk/rpc";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -21,7 +26,7 @@ const cfg = {
   rpcUrl: "https://rpc.ankr.com/stellar_soroban",
   passphrase: Networks.PUBLIC,
   gateway: "CD6VSKXB4HY2DWU7EP2PUIYTBJBJ36LDJXEZN4NSXFYF5YP37DDFX6NF",
-  sourceAddress: "0x1fC2276Cf55574236340Db742658b972D5320d7a",
+  sourceAddress: "0x7Ce3178161ff18aE26E0419C0c305AE2985e99e0",
   sourceChain: "base",
   wasmHash: "354d8735ca76ce9a0ca6895646b7c7a0dfc0e93929897a749212b8852ca403aa",
 };
@@ -43,7 +48,9 @@ async function pollTransaction(
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error(`Transaction not confirmed after ${(maxAttempts * intervalMs) / 1000}s: ${txHash}`);
+  throw new Error(
+    `Transaction not confirmed after ${(maxAttempts * intervalMs) / 1000}s: ${txHash}`,
+  );
 }
 
 async function submitWithRetry(
@@ -67,7 +74,9 @@ async function submitWithRetry(
       return await pollTransaction(server, txHash);
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
-      console.error(`Attempt ${attempt}/${maxRetries} failed: ${lastError.message}`);
+      console.error(
+        `Attempt ${attempt}/${maxRetries} failed: ${lastError.message}`,
+      );
       if (attempt < maxRetries) {
         const backoff = attempt * 5000;
         console.log(`Retrying in ${backoff / 1000}s...`);
@@ -114,7 +123,11 @@ async function isContractInitialized(
 ): Promise<boolean> {
   try {
     const key = xdr.ScVal.scvSymbol("init");
-    const result = await server.getContractData(contractId, key, Durability.Persistent);
+    const result = await server.getContractData(
+      contractId,
+      key,
+      Durability.Persistent,
+    );
     return result.val !== undefined;
   } catch {
     return false;
