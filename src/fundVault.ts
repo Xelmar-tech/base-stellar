@@ -90,4 +90,6 @@ async function main() {
   await fundVault({ walletSecret, vaultAddress, amount, tokenId });
 }
 
-main().catch(console.error);
+main()
+  .then(() => process.exit(0))
+  .catch(console.error);
