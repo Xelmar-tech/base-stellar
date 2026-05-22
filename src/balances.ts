@@ -9,7 +9,9 @@ async function getVaultBalances(vaultAddress: string) {
   const address = new Address(vaultAddress);
 
   const [usdcEntry, xlmEntry] = await Promise.all([
-    server.getAssetBalance(address, new Asset("USDC", USDC_ISSUER_MAINNET)),
+    server
+      .getAssetBalance(address, new Asset("USDC", USDC_ISSUER_MAINNET))
+      .catch(() => null), // If USDC balance not found, return null
     server.getAssetBalance(address, Asset.native()),
   ]);
 
